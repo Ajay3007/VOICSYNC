@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Output / generated files
+output/
+
+# Model weights & large binary files
+models/*.bin
+models/*.pt
+models/*.pth
+models/*.gguf
+models/*.safetensors
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Installed deps tracker (local only)
+installed/
+
+# Temp Python version dirs / stray venvs
+3.11/
+3.12/
+Python/
+needs/
+or/
+'#'/
+\#/
+
+# Claude AI config
+.claude/

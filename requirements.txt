@@ -1,0 +1,23 @@
+# voice-sync dependencies
+# Python 3.10 – 3.12 recommended (PyTorch/WhisperX wheels).
+# FFmpeg must be installed separately and on PATH.
+
+# --- UI ---------------------------------------------------------------
+customtkinter>=5.2.2
+
+# --- speech recognition + forced alignment ----------------------------
+# whisperx pulls in faster-whisper, transformers, torch and torchaudio.
+# IMPORTANT: whisperx 3.7.x requires torchaudio~=2.8.0 (torchaudio 2.9+
+# removed torchaudio.AudioMetaData, which breaks pyannote/VAD).
+# For NVIDIA GPU acceleration install the CUDA build FIRST:
+#   pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+# (cu128 covers modern cards incl. RTX 50-series / Blackwell sm_120;
+#  older cards can use the cu121 index with the same pins.)
+whisperx>=3.1.5
+torch>=2.0.0,<2.9
+torchaudio>=2.0.0,<2.9
+
+# --- numerics + acoustic features (loudness / pitch for emphasis) -----
+numpy>=1.24,<2.1
+librosa>=0.10.1
+soundfile>=0.12.1

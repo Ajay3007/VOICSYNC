@@ -1,0 +1,36 @@
+"""Shared visual constants for the dark UI."""
+from __future__ import annotations
+
+# Base surfaces
+COLOR_BG = "#101418"
+COLOR_PANEL = "#171c22"
+COLOR_PANEL_ALT = "#1d242c"
+COLOR_BORDER = "#2a323c"
+
+# Text
+COLOR_TEXT = "#e6edf3"
+COLOR_TEXT_MUTED = "#8b98a5"
+
+# Accents
+COLOR_ACCENT = "#3b82f6"
+COLOR_ACCENT_HOVER = "#2563eb"
+COLOR_SUCCESS = "#22c55e"
+COLOR_WARNING = "#f59e0b"
+COLOR_ERROR = "#ef4444"
+
+# Log-level colors for the live log view.
+LOG_COLORS: dict[str, str] = {
+    "DEBUG": COLOR_TEXT_MUTED,
+    "INFO": COLOR_TEXT,
+    "WARNING": COLOR_WARNING,
+    "ERROR": COLOR_ERROR,
+    "CRITICAL": COLOR_ERROR,
+    "SUCCESS": COLOR_SUCCESS,
+}
+
+FONT_FAMILY = "Segoe UI"
+FONT_MONO = "Consolas"
+
+PAD = 12
+PAD_SMALL = 6
+CORNER_RADIUS = 8
