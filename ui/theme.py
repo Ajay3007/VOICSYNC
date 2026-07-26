@@ -1,6 +1,8 @@
 """Shared visual constants for the dark UI."""
 from __future__ import annotations
 
+import sys
+
 # Base surfaces
 COLOR_BG = "#101418"
 COLOR_PANEL = "#171c22"
@@ -28,8 +30,22 @@ LOG_COLORS: dict[str, str] = {
     "SUCCESS": COLOR_SUCCESS,
 }
 
-FONT_FAMILY = "Segoe UI"
-FONT_MONO = "Consolas"
+# Tk resolves font families by exact name and falls back *silently* when a
+# name is missing — so the family must exist on the platform.  macOS has
+# neither "Segoe UI" nor "Consolas": both collapse to .AppleSystemUIFont,
+# which is proportional, so the mono constant stops being monospaced and
+# the log pane loses its alignment.  The real system fonts (SF Pro / SF
+# Mono) are not exposed to Tk by name, leaving Helvetica Neue and Menlo as
+# the reliable choices.
+if sys.platform == "darwin":
+    FONT_FAMILY = "Helvetica Neue"
+    FONT_MONO = "Menlo"
+elif sys.platform == "win32":
+    FONT_FAMILY = "Segoe UI"
+    FONT_MONO = "Consolas"
+else:
+    FONT_FAMILY = "DejaVu Sans"
+    FONT_MONO = "DejaVu Sans Mono"
 
 PAD = 12
 PAD_SMALL = 6

@@ -21,24 +21,59 @@ audio in  ──►  WhisperX transcribe ──► forced alignment ──► pa
 | Requirement | Notes |
 |---|---|
 | **Python 3.10 – 3.12** | PyTorch/WhisperX wheels are published for these versions. Python 3.13/3.14 will usually **fail to install torch** — create a 3.11/3.12 venv instead. |
-| **FFmpeg** | Needed to decode mp3/m4a. Windows: `winget install Gyan.FFmpeg` (reopen the terminal afterwards). |
-| **NVIDIA GPU** (optional) | Used automatically when available (`float16`). CPU fallback (`int8`) works everywhere, just slower. |
+| **FFmpeg** | Needed to decode mp3/m4a. Windows: `winget install Gyan.FFmpeg` (reopen the terminal afterwards). macOS: `brew install ffmpeg`. Linux: `sudo apt install ffmpeg`. |
+| **Tk 8.6** | The UI is CustomTkinter. Bundled with the python.org and Anaconda builds. Homebrew Python needs it separately: `brew install python-tk@3.12`. |
+| **NVIDIA GPU** (optional) | Used automatically when available (`float16`). CPU fallback (`int8`) works everywhere, just slower. **Not available on macOS** — see [Platform notes](#platform-notes). |
 | Disk space | Whisper models are downloaded automatically on first run (75 MB for `tiny` up to ~3 GB for `large-v3`). |
+
+### Where the models are cached
+
+Downloads do **not** land in the project folder. Delete these to reclaim the space:
+
+| What | Location (macOS / Linux) | Location (Windows) |
+|---|---|---|
+| Whisper ASR models | `~/.cache/huggingface/hub` | `%USERPROFILE%\.cache\huggingface\hub` |
+| wav2vec2 alignment models | `~/.cache/torch/hub` | `%USERPROFILE%\.cache\torch\hub` |
 
 ## Installation
 
-```bash
-# 1. Create and activate a virtual environment (Python 3.11 or 3.12)
-py -3.12 -m venv .venv          # Windows
+### Windows
+
+```bat
+:: 1. Create and activate a virtual environment (Python 3.11 or 3.12)
+py -3.12 -m venv .venv
 .venv\Scripts\activate
 
-# macOS / Linux:
-# python3.12 -m venv .venv && source .venv/bin/activate
-
-# 2. (Optional, NVIDIA GPU) install CUDA torch first
-#    cu128 supports modern cards including RTX 50-series (Blackwell).
-#    Keep torchaudio at 2.8.x — whisperx requires it.
+:: 2. (Optional, NVIDIA GPU) install CUDA torch FIRST
+::    cu128 supports modern cards including RTX 50-series (Blackwell).
+::    Keep torchaudio at 2.8.x — whisperx requires it.
 pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+
+:: 3. Install dependencies
+pip install -r requirements.txt
+
+:: 4. Run
+python app.py
+```
+
+### macOS (Intel and Apple Silicon)
+
+There is **no step 2** — skip the CUDA install entirely; it does not exist for
+macOS and the plain PyPI wheels are the correct ones. See
+[Platform notes](#platform-notes) for why this machine runs on CPU.
+
+```bash
+# 1. Prerequisites
+brew install ffmpeg
+
+# 2. Create and activate a virtual environment with Python 3.10–3.12.
+#    `python3` on macOS is often 3.13+ (Homebrew) or 3.9 (Apple's system
+#    Python) — both are outside the supported range, so name the version
+#    explicitly. Check with: python3.12 --version
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+# If you have no 3.12:  brew install python@3.12 python-tk@3.12
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -47,8 +82,57 @@ pip install -r requirements.txt
 python app.py
 ```
 
+### Linux
+
+```bash
+sudo apt install ffmpeg python3.12-venv python3-tk
+python3.12 -m venv .venv && source .venv/bin/activate
+# Optional NVIDIA GPU: see the Windows step 2 above, same command.
+pip install -r requirements.txt
+python app.py
+```
+
 The first processing run downloads the Whisper model and the wav2vec2
 alignment model automatically; later runs reuse the local cache.
+
+## Platform notes
+
+`engine/device.py` picks the compute device automatically at the start of
+every run, and logs the choice (`Compute device: …`) at startup.
+
+| Platform | Device | Compute type |
+|---|---|---|
+| NVIDIA GPU (Windows/Linux, correct CUDA build) | `cuda` | `float16` |
+| Everything else, incl. **all Macs** | `cpu` | `int8` |
+
+### macOS is CPU-only — by design, not by misconfiguration
+
+On Apple Silicon there is no GPU path for this app, and no setting will
+enable one:
+
+* **CUDA** is NVIDIA-only and has never existed on macOS.
+* **MPS (Metal)** cannot be used either. The transcription backend is
+  faster-whisper, which runs on **CTranslate2 — a library with no Metal
+  backend**. `torch.backends.mps` being available is irrelevant, because
+  the ASR step never goes through PyTorch.
+
+So on a Mac the app correctly reports `CPU (int8)` and **that is the
+expected, fully-supported configuration** — the accuracy of the output is
+identical to a GPU run. Only the speed differs.
+
+**Practical consequence — choose smaller models.** The `small` default is
+tuned for a GPU. On Mac CPU, prefer:
+
+| Model | Use on macOS |
+|---|---|
+| `tiny` / `base` | Iterating, checking sync, drafts — start here. |
+| `small` | Reasonable for short clips; the default. |
+| `medium` / `large-v3` | Final renders only. Expect several minutes per minute of audio. |
+
+Apple Silicon CPU inference is respectable — an M-series core runs `base`
+comfortably — but a long voiceover on `large-v3` is an over-lunch job.
+The run is cancellable at any point, and the UI stays responsive because
+processing happens on a background thread.
 
 ## Usage
 
@@ -57,7 +141,9 @@ alignment model automatically; later runs reuse the local cache.
    The app reports a *script match* percentage in the statistics and
    `analysis.json` so you can verify the TTS said what it should.
 3. **Select Model** — `tiny`/`base` for drafts, `small` (default) for a
-   good balance, `large-v3` for maximum accuracy.
+   good balance, `large-v3` for maximum accuracy. On CPU-only machines
+   (**every Mac** — see [Platform notes](#platform-notes)) stay at
+   `tiny`/`base` while iterating; the larger models are for final runs.
 4. **Select Language** — *Auto detect* (default) or force a language.
 5. **Export Folder** — defaults to `output/` next to the app.
 6. **Start** — progress, elapsed time and estimated remaining time are
@@ -150,10 +236,30 @@ Adding capabilities later requires no core changes:
 |---|---|
 | `Could not decode …` | FFmpeg missing — install it and restart the terminal. |
 | `pip` cannot find `torch` | Your Python is too new (3.13/3.14). Use a 3.11/3.12 venv. |
-| Very slow processing | You are on CPU. Use a smaller model (`tiny`/`base`) or install CUDA torch. |
 | `No alignment model available for language 'xx'` | WhisperX has no wav2vec2 model for that language; force English or another supported language. |
-| `CUDA error: no kernel image is available` | Your torch build lacks kernels for the GPU (e.g. RTX 50-series needs cu128). The app auto-falls back to CPU; for GPU speed reinstall: `pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128`. |
 | `module 'torchaudio' has no attribute 'AudioMetaData'` | torchaudio 2.9+ is too new for whisperx/pyannote — pin `torchaudio==2.8.0`. |
 | Weird timestamps on numbers/symbols | Tokens WhisperX cannot align are interpolated between neighbours — expected behaviour. |
+
+**Speed**
+
+| Symptom | Fix |
+|---|---|
+| Very slow processing **on Windows/Linux** | You fell back to CPU. Check the `Compute device:` line in the log; install CUDA torch (see install step 2) or use a smaller model. |
+| Very slow processing **on macOS** | Expected — Macs are always CPU-only ([why](#macos-is-cpu-only--by-design-not-by-misconfiguration)). Use `tiny`/`base`. There is no GPU option to enable. |
+
+**Windows / Linux GPU only**
+
+| Symptom | Fix |
+|---|---|
+| `CUDA error: no kernel image is available` | Your torch build lacks kernels for the GPU (e.g. RTX 50-series needs cu128). The app auto-falls back to CPU; for GPU speed reinstall: `pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128`. |
+
+**macOS only**
+
+| Symptom | Fix |
+|---|---|
+| Log pane is not monospaced; timestamps/columns don't line up | You are on a build predating the macOS font fix. `ui/theme.py` must select `Helvetica Neue`/`Menlo` on darwin — Tk falls back *silently* when a family is missing, and both `Segoe UI` and `Consolas` collapse to the proportional `.AppleSystemUIFont`. |
+| `ModuleNotFoundError: No module named '_tkinter'` | Your Python has no Tk. `brew install python-tk@3.12`, or use the python.org / Anaconda build. |
+| `pip` resolves whisperx 3.8.x and then fails building `torchcodec` | 3.8.x requires `numpy>=2.1` and pulls `torchcodec`, which is picky about the installed FFmpeg major version. The `numpy<2.1` pin in `requirements.txt` deliberately holds whisperx at 3.7.5 — don't loosen it. |
+| App launches but no window appears | The window opened behind the terminal, or on another Space. Check the Dock for the Python rocket icon. |
 
 Logs are written to `output/logs/voice-sync.log`.

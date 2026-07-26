@@ -3,6 +3,7 @@
 # FFmpeg must be installed separately and on PATH.
 
 # --- UI ---------------------------------------------------------------
+# 6.0.0 verified working (macOS 26, Tk 8.6) despite the major bump.
 customtkinter>=5.2.2
 
 # --- speech recognition + forced alignment ----------------------------
@@ -18,6 +19,10 @@ torch>=2.0.0,<2.9
 torchaudio>=2.0.0,<2.9
 
 # --- numerics + acoustic features (loudness / pitch for emphasis) -----
+# The numpy ceiling is load-bearing: whisperx 3.8+ requires numpy>=2.1 and
+# drags in torchcodec, which binds to a narrow range of FFmpeg majors and
+# breaks on current Homebrew FFmpeg.  Holding numpy<2.1 resolves whisperx
+# to 3.7.5 (torch/torchaudio ~=2.8.0), which decodes via the ffmpeg CLI.
 numpy>=1.24,<2.1
 librosa>=0.10.1
 soundfile>=0.12.1

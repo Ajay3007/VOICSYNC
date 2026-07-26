@@ -49,9 +49,14 @@ def _check_python_version() -> None:
 def _check_environment() -> None:
     """Log (not fail on) missing runtime prerequisites."""
     if shutil.which("ffmpeg") is None:
+        install_hint = {
+            "win32": "winget install Gyan.FFmpeg",
+            "darwin": "brew install ffmpeg",
+        }.get(sys.platform, "sudo apt install ffmpeg")
         logger.warning(
             "FFmpeg was not found on PATH. Audio decoding will fail. "
-            "Install it, e.g.:  winget install Gyan.FFmpeg"
+            "Install it, e.g.:  %s",
+            install_hint,
         )
     try:
         from engine.device import describe_hardware
